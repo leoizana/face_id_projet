@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentification par Reconnaissance Faciale</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
+</head>
+<body>
+    <h1>Authentification par Reconnaissance Faciale</h1>
+    <input type="file" id="imageUpload" accept="image/*">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Chargement des modèles...');
+            await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+            console.log('Modèles chargés avec succès');
+            
+            // Charger quatre images pour chaque célébrité
+            const imageRayna1 = await faceapi.fetchImage('/models/celebrity_photos/Rayna_Vallandhinghan/1.jpg');
+            const imageRayna2 = await faceapi.fetchImage('/models/celebrity_photos/Rayna_Vallandhinghan/2.jpg');
+            const imageRayna3 = await faceapi.fetchImage('/models/celebrity_photos/Rayna_Vallandhinghan/3.jpg');
+            const imageRayna4 = await faceapi.fetchImage('/models/celebrity_photos/Rayna_Vallandhinghan/4.jpg');
+            
+            const imageJenna1 = await faceapi.fetchImage('/models/celebrity_photos/Jenna_Ortega/1.jpg');
+            const imageJenna2 = await faceapi.fetchImage('/models/celebrity_photos/Jenna_Ortega/2.jpg');
+            const imageJenna3 = await faceapi.fetchImage('/models/celebrity_photos/Jenna_Ortega/3.jpg');
+            const imageJenna4 = await faceapi.fetchImage('/models/celebrity_photos/Jenna_Ortega/4.jpg');
+            
+            const imageMadison1 = await faceapi.fetchImage('/models/celebrity_photos/Madison_Beer/1.jpg');
+            const imageMadison2 = await faceapi.fetchImage('/models/celebrity_photos/Madison_Beer/2.jpg');
+            const imageMadison3 = await faceapi.fetchImage('/models/celebrity_photos/Madison_Beer/3.jpg');
+            const imageMadison4 = await faceapi.fetchImage('/models/celebrity_photos/Madison_Beer/4.jpg');
+
+            const imageDirecteur1 = await faceapi.fetchImage('/models/celebrity_photos/Directeur/01.jpg');
+            const imageDirecteur2 = await faceapi.fetchImage('/models/celebrity_photos/Directeur/02.jpg');
+            const imageDirecteur3 = await faceapi.fetchImage('/models/celebrity_photos/Directeur/03.jpg');
+            const imageDirecteur4 = await faceapi.fetchImage('/models/celebrity_photos/Directeur/04.jpg');
+
+            const imageMacron1 = await faceapi.fetchImage('/models/celebrity_photos/Macron/01.jpg');
+            const imageMacron2 = await faceapi.fetchImage('/models/celebrity_photos/Macron/02.jpg');
+            const imageMacron3 = await faceapi.fetchImage('/models/celebrity_photos/Macron/03.jpg');
+            const imageMacron4 = await faceapi.fetchImage('/models/celebrity_photos/Macron/04.jpg');
+            
+            // Extraire les descripteurs de visage pour chaque image
+            const detectionsRayna1 = await faceapi.detectSingleFace(imageRayna1).withFaceLandmarks().withFaceDescriptor();
+            const detectionsRayna2 = await faceapi.detectSingleFace(imageRayna2).withFaceLandmarks().withFaceDescriptor();
+            const detectionsRayna3 = await faceapi.detectSingleFace(imageRayna3).withFaceLandmarks().withFaceDescriptor();
+            const detectionsRayna4 = await faceapi.detectSingleFace(imageRayna4).withFaceLandmarks().withFaceDescriptor();
+            
+            const detectionsJenna1 = await faceapi.detectSingleFace(imageJenna1).withFaceLandmarks().withFaceDescriptor();
+            const detectionsJenna2 = await faceapi.detectSingleFace(imageJenna2).withFaceLandmarks().withFaceDescriptor();
+            const detectionsJenna3 = await faceapi.detectSingleFace(imageJenna3).withFaceLandmarks().withFaceDescriptor();
+            const detectionsJenna4 = await faceapi.detectSingleFace(imageJenna4).withFaceLandmarks().withFaceDescriptor();
+            
+            const detectionsMadison1 = await faceapi.detectSingleFace(imageMadison1).withFaceLandmarks().withFaceDescriptor();
+            const detectionsMadison2 = await faceapi.detectSingleFace(imageMadison2).withFaceLandmarks().withFaceDescriptor();
+            const detectionsMadison3 = await faceapi.detectSingleFace(imageMadison3).withFaceLandmarks().withFaceDescriptor();
+            const detectionsMadison4 = await faceapi.detectSingleFace(imageMadison4).withFaceLandmarks().withFaceDescriptor();
+
+            const detectionsDirecteur1 = await faceapi.detectSingleFace(imageDirecteur1).withFaceLandmarks().withFaceDescriptor();
+            const detectionsDirecteur2 = await faceapi.detectSingleFace(imageDirecteur2).withFaceLandmarks().withFaceDescriptor();
+            const detectionsDirecteur3 = await faceapi.detectSingleFace(imageDirecteur3).withFaceLandmarks().withFaceDescriptor();
+            const detectionsDirecteur4 = await faceapi.detectSingleFace(imageDirecteur4).withFaceLandmarks().withFaceDescriptor();
+
+            const detectionsMacron1 = await faceapi.detectSingleFace(imageMacron1).withFaceLandmarks().withFaceDescriptor();
+            const detectionsMacron2 = await faceapi.detectSingleFace(imageMacron2).withFaceLandmarks().withFaceDescriptor();
+            const detectionsMacron3 = await faceapi.detectSingleFace(imageMacron3).withFaceLandmarks().withFaceDescriptor();
+            const detectionsMacron4 = await faceapi.detectSingleFace(imageMacron4).withFaceLandmarks().withFaceDescriptor();
+            
+            
+            // Vérifier si des visages ont été détectés avant de les ajouter
+            const knownDescriptors = [];
+            
+            // Ajouter les descripteurs pour Rayna (4 images)
+            if (detectionsRayna1) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Rayna', [detectionsRayna1.descriptor]));
+            }
+            if (detectionsRayna2) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Rayna', [detectionsRayna2.descriptor]));
+            }
+            if (detectionsRayna3) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Rayna', [detectionsRayna3.descriptor]));
+            }
+            if (detectionsRayna4) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Rayna', [detectionsRayna4.descriptor]));
+            }
+            
+            // Ajouter les descripteurs pour Jenna (4 images)
+            if (detectionsJenna1) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Jenna', [detectionsJenna1.descriptor]));
+            }
+            if (detectionsJenna2) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Jenna', [detectionsJenna2.descriptor]));
+            }
+            if (detectionsJenna3) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Jenna', [detectionsJenna3.descriptor]));
+            }
+            if (detectionsJenna4) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Jenna', [detectionsJenna4.descriptor]));
+            }
+            
+            // Ajouter les descripteurs pour Madison (4 images)
+            if (detectionsMadison1) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Madison', [detectionsMadison1.descriptor]));
+            }
+            if (detectionsMadison2) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Madison', [detectionsMadison2.descriptor]));
+            }
+            if (detectionsMadison3) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Madison', [detectionsMadison3.descriptor]));
+            }
+            if (detectionsMadison4) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Madison', [detectionsMadison4.descriptor]));
+            }
+
+             // Ajouter les descripteurs pour le directeur (4 images)
+             if (detectionsDirecteur1) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Directeur', [detectionsDirecteur1.descriptor]));
+            }
+            if (detectionsDirecteur2) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Directeur', [detectionsDirecteur2.descriptor]));
+            }
+            if (detectionsDirecteur3) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Directeur', [detectionsDirecteur3.descriptor]));
+            }
+            if (detectionsDirecteur4) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Directeur', [detectionsDirecteur4.descriptor]));
+            }
+
+            // Ajouter les descripteurs pour le Macron (4 images)
+            if (detectionsMacron1) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Macron', [detectionsMacron1.descriptor]));
+            }
+            if (detectionsMacron2) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Macron', [detectionsMacron2.descriptor]));
+            }
+            if (detectionsMacron3) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Macron', [detectionsMacron3.descriptor]));
+            }
+            if (detectionsMacron4) {
+                knownDescriptors.push(new faceapi.LabeledFaceDescriptors('Macron', [detectionsMacron4.descriptor]));
+            }
+            
+            const faceMatcher = new faceapi.FaceMatcher(knownDescriptors, 0.6); // 0.6 = seuil de correspondance
+            
+            // Lorsque l'utilisateur télécharge une image
+            const imageUpload = document.getElementById('imageUpload');
+            imageUpload.addEventListener('change', async () => {
+                console.log('Image sélectionnée');
+                const image = await faceapi.bufferToImage(imageUpload.files[0]);
+                console.log('Image chargée');
+            
+                // Détecter et comparer le visage dans l'image téléchargée
+                const detections = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
+                if (detections) {
+                    const result = faceMatcher.findBestMatch(detections.descriptor);
+                    console.log(result.toString()); // Affiche la correspondance
+                    
+                    // Rediriger vers la page de login et passer le nom d'utilisateur via GET dans l'URL
+                    let username = "";
+                    if (result.toString().includes('Rayna')) {
+                        username = 'Rayna';
+                    } else if (result.toString().includes('Jenna')) {
+                        username = 'Jenna';
+                    } else if (result.toString().includes('Madison')) {
+                        username = 'Madison';
+                    }
+                    else if (result.toString().includes('Directeur')) {
+                        username = 'Directeur';
+                    }
+                    else if (result.toString().includes('Macron')) {
+                        username = 'Macron';
+                    }
+                    
+                    
+                    // Redirection vers login.php avec le paramètre 'username'
+                    window.location.href = `/auth/login.php?username=${username}`;
+                } else {
+                    alert('Aucun visage détecté dans l\'image.');
+                }
+            });
+        });
+        
+    </script>
+</body>
+</html>
