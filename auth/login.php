@@ -1,11 +1,27 @@
 <?php
-session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $descriptor = $data['descriptor'] ?? null;
 
-// Vérifier si le paramètre 'username' est passé dans l'URL
-if (isset($_GET['username'])) {
-    $_SESSION['user'] = $_GET['username']; // Sauvegarder le nom de l'utilisateur dans la session
-    echo json_encode(["message" => "Bienvenue, " . $_SESSION['user'] . " ! Vous etes connecte."]);
-} else {
-    echo json_encode(["message" => "Aucun utilisateur reconnu."]);
+    if (!$descriptor) {
+        echo json_encode(['success' => false, 'message' => 'Descripteur manquant']);
+        exit;
+    }
+
+    $usersDir = __DIR__ . '/users';
+    foreach (scandir($usersDir) as $user) {
+        if ($user === '.' || $user === '..') continue;
+
+        $profileImage = "$usersDir/$user/profile.jpg";
+        if (file_exists($profileImage)) {
+            // Charger et comparer le descripteur
+            // Utiliser un script JS côté serveur (node.js) ou Python pour la correspondance.
+            // Placeholder : connexion réussie si le fichier existe
+            echo json_encode(['success' => true, 'username' => $user]);
+            exit;
+        }
+    }
+
+    echo json_encode(['success' => false, 'message' => 'Utilisateur non reconnu']);
 }
 ?>
