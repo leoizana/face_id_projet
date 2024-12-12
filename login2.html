@@ -13,23 +13,48 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // Ajout du polyfill pour navigator.mediaDevices
-            if (navigator.mediaDevices === undefined) {
+            // Polyfill plus complet pour iOS
+            if (!navigator.mediaDevices) {
                 navigator.mediaDevices = {};
             }
-            
-            if (navigator.mediaDevices.getUserMedia === undefined) {
+
+            navigator.mediaDevices.getUserMedia = navigator.mediaDevices.getUserMedia ||
+                navigator.webkitGetUserMedia ||
+                navigator.mozGetUserMedia ||
+                navigator.msGetUserMedia;
+
+            if (!navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia = function(constraints) {
-                    const getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-                    
+                    var getUserMedia = navigator.getUserMedia ||
+                        navigator.webkitGetUserMedia ||
+                        navigator.mozGetUserMedia ||
+                        navigator.msGetUserMedia;
+
                     if (!getUserMedia) {
-                        return Promise.reject(new Error('getUserMedia n\'est pas implémenté sur ce navigateur'));
+                        return Promise.reject(
+                            new Error('Ce navigateur ne supporte pas la capture vidéo. Veuillez utiliser Safari sur iOS.')
+                        );
                     }
-                    
-                    return new Promise((resolve, reject) => {
+
+                    return new Promise(function(resolve, reject) {
                         getUserMedia.call(navigator, constraints, resolve, reject);
                     });
                 }
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "user"
+                    },
+                    audio: false
+                });
+                const videoInput = document.getElementById('videoInput');
+                videoInput.srcObject = stream;
+                videoInput.play();
+            } catch (err) {
+                console.error("Erreur complète:", err);
+                alert("Erreur d'accès à la caméra. Veuillez vérifier que:\n1. Vous utilisez Safari\n2. Vous avez autorisé l'accès à la caméra\n3. Vous êtes en HTTPS");
             }
 
             console.log('Chargement des modèles...');
@@ -37,25 +62,6 @@
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
             console.log('Modèles chargés avec succès');
-
-            const videoInput = document.getElementById('videoInput');
-            
-            // Démarrage automatique de la caméra
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: "user",
-                        width: 640,
-                        height: 480
-                    },
-                    audio: false
-                });
-                videoInput.srcObject = stream;
-                videoInput.play();
-            } catch (err) {
-                alert("Impossible d'accéder à la caméra: " + err.message);
-                console.error("Erreur détaillée:", err);
-            }
 
             // Charger les images des utilisateurs enregistrés
             const knownDescriptors = [];
