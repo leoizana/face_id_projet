@@ -13,48 +13,62 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // Polyfill plus complet pour iOS
-            if (!navigator.mediaDevices) {
-                navigator.mediaDevices = {};
+            const videoInput = document.getElementById('videoInput');
+            
+            // Vérification du navigateur
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            
+            if (isIOS && !isSafari) {
+                alert("Sur iOS, veuillez utiliser Safari pour accéder à la caméra");
+                return;
             }
 
-            navigator.mediaDevices.getUserMedia = navigator.mediaDevices.getUserMedia ||
-                navigator.webkitGetUserMedia ||
-                navigator.mozGetUserMedia ||
-                navigator.msGetUserMedia;
-
-            if (!navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia = function(constraints) {
-                    var getUserMedia = navigator.getUserMedia ||
-                        navigator.webkitGetUserMedia ||
-                        navigator.mozGetUserMedia ||
-                        navigator.msGetUserMedia;
-
-                    if (!getUserMedia) {
-                        return Promise.reject(
-                            new Error('Ce navigateur ne supporte pas la capture vidéo. Veuillez utiliser Safari sur iOS.')
-                        );
-                    }
-
-                    return new Promise(function(resolve, reject) {
-                        getUserMedia.call(navigator, constraints, resolve, reject);
-                    });
-                }
+            // Vérification HTTPS
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                alert("Cette application nécessite une connexion HTTPS");
+                window.location.href = window.location.href.replace('http:', 'https:');
+                return;
             }
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                // Vérification explicite des permissions
+                const permissionResult = await navigator.permissions.query({ name: 'camera' });
+                if (permissionResult.state === 'denied') {
+                    alert("L'accès à la caméra a été refusé. Veuillez l'autoriser dans les paramètres de votre navigateur.");
+                    return;
+                }
+
+                const constraints = {
                     video: {
-                        facingMode: "user"
-                    },
-                    audio: false
-                });
-                const videoInput = document.getElementById('videoInput');
+                        facingMode: "user",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoInput.srcObject = stream;
-                videoInput.play();
+                
+                // Attendre que la vidéo soit vraiment prête
+                await new Promise((resolve) => {
+                    videoInput.onloadedmetadata = () => {
+                        resolve();
+                    };
+                });
+                
+                await videoInput.play();
+                console.log("Caméra démarrée avec succès");
+
             } catch (err) {
-                console.error("Erreur complète:", err);
-                alert("Erreur d'accès à la caméra. Veuillez vérifier que:\n1. Vous utilisez Safari\n2. Vous avez autorisé l'accès à la caméra\n3. Vous êtes en HTTPS");
+                console.error("Erreur détaillée:", err);
+                let message = "Erreur d'accès à la caméra.\n\n";
+                message += "Veuillez vérifier :\n";
+                message += "1. Que vous utilisez Safari sur iOS\n";
+                message += "2. Que vous avez autorisé l'accès à la caméra dans les paramètres\n";
+                message += "3. Que vous êtes en HTTPS\n\n";
+                message += "Erreur technique : " + err.message;
+                alert(message);
             }
 
             console.log('Chargement des modèles...');
