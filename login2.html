@@ -25,15 +25,17 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: { ideal: "user" },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
+                        facingMode: "user",
+                        width: 640,
+                        height: 480
+                    },
+                    audio: false
                 });
                 videoInput.srcObject = stream;
+                videoInput.play();
             } catch (err) {
-                alert("Impossible d'accéder à la caméra.");
-                console.error(err);
+                alert("Impossible d'accéder à la caméra: " + err.message);
+                console.error("Erreur détaillée:", err);
             }
 
             // Charger les images des utilisateurs enregistrés
