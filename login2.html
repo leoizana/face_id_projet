@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion avec Reconnaissance Faciale</title>
+    <title>Connexion avec Recoonnaissance Faciale</title>
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
 </head>
 <body>
@@ -13,6 +13,25 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            // Ajout du polyfill pour navigator.mediaDevices
+            if (navigator.mediaDevices === undefined) {
+                navigator.mediaDevices = {};
+            }
+            
+            if (navigator.mediaDevices.getUserMedia === undefined) {
+                navigator.mediaDevices.getUserMedia = function(constraints) {
+                    const getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                    
+                    if (!getUserMedia) {
+                        return Promise.reject(new Error('getUserMedia n\'est pas implémenté sur ce navigateur'));
+                    }
+                    
+                    return new Promise((resolve, reject) => {
+                        getUserMedia.call(navigator, constraints, resolve, reject);
+                    });
+                }
+            }
+
             console.log('Chargement des modèles...');
             await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
