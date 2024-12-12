@@ -20,66 +20,36 @@
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
             console.log('Modèles chargés avec succès');
         
-            // Charger les utilisateurs depuis le dossier /users via PHP
-            let users = [];
-            try {
-                const response = await fetch('/auth/get_users.php'); // Script PHP pour obtenir les utilisateurs
-                users = await response.json();
-            } catch (error) {
-                console.error('Erreur lors du chargement des utilisateurs :', error);
-                alert("Impossible de charger les utilisateurs.");
-                return;
-            }
-        
-            console.log('Utilisateurs chargés :', users);
-        
-            const labeledDescriptors = [];
-            for (const user of users) {
-                const { username, images } = user;
-                const descriptors = [];
-        
-                for (const imagePath of images) {
-                    try {
-                        const img = await faceapi.fetchImage(imagePath);
-                        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                        if (detection) {
-                            descriptors.push(detection.descriptor);
-                        }
-                    } catch (err) {
-                        console.error(`Erreur lors du traitement de l'image ${imagePath}:`, err);
-                    }
-                }
-        
-                if (descriptors.length > 0) {
-                    labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(username, descriptors));
-                }
-            }
-        
-            const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6); // Seuil de correspondance
-        
             // Lorsque l'utilisateur télécharge une image
             const imageUpload = document.getElementById('imageUpload');
             imageUpload.addEventListener('change', async () => {
                 const image = await faceapi.bufferToImage(imageUpload.files[0]);
                 const detection = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor();
+                
                 if (detection) {
-                    const result = faceMatcher.findBestMatch(detection.descriptor);
-                    console.log(result.toString());
-        
-                    const username = result.label !== 'unknown' ? result.label : null;
-                    if (username) {
-                        alert(`Bienvenue, ${username}!`);
+                    // Envoie du descripteur facial au serveur pour vérification
+                    const descriptor = detection.descriptor;
+                    const response = await fetch('/auth/login.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ descriptor: descriptor })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(`Bienvenue, ${result.username}!`);
                         // Redirection vers une autre page avec le nom d'utilisateur
-                        window.location.href = `/auth/login.php?username=${username}`;
+                        window.location.href = `/auth/dashboard.php?username=${result.username}`;
                     } else {
-                        alert('Aucune correspondance trouvée.');
+                        alert(result.message);
                     }
                 } else {
                     alert('Aucun visage détecté dans l\'image téléchargée.');
                 }
             });
         });
-        
     </script>
 </body>
 </html>

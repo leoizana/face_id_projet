@@ -9,9 +9,7 @@
 <body>
     <h1>Connexion avec Reconnaissance Faciale</h1>
     
-    <button id="startVideoBtn">Activer la Caméra</button>
-    <br><br>
-    <video id="videoInput" width="640" height="480" autoplay></video>
+    <video id="videoInput" width="640" height="480" autoplay playsinline></video>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -20,6 +18,23 @@
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
             console.log('Modèles chargés avec succès');
+
+            const videoInput = document.getElementById('videoInput');
+            
+            // Démarrage automatique de la caméra
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: "user" },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                videoInput.srcObject = stream;
+            } catch (err) {
+                alert("Impossible d'accéder à la caméra.");
+                console.error(err);
+            }
 
             // Charger les images des utilisateurs enregistrés
             const knownDescriptors = [];
@@ -33,23 +48,7 @@
 
             const faceMatcher = new faceapi.FaceMatcher(knownDescriptors, 0.6); // 0.6 = seuil de correspondance
 
-            // Activation de la caméra
-            const videoInput = document.getElementById('videoInput');
-            const startVideoBtn = document.getElementById('startVideoBtn');
-
-            startVideoBtn.addEventListener('click', async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: "user" } // Utiliser la caméra frontale
-                    });
-                    videoInput.srcObject = stream;
-                } catch (err) {
-                    alert("Impossible d'accéder à la caméra.");
-                    console.error(err);
-                }
-            });
-
-            // Analyse de la vidéo en temps réel
+            // Modification de la détection vidéo
             videoInput.addEventListener('play', async () => {
                 console.log("Détection en cours...");
                 const canvas = faceapi.createCanvasFromMedia(videoInput);
@@ -57,24 +56,37 @@
                 const displaySize = { width: videoInput.width, height: videoInput.height };
                 faceapi.matchDimensions(canvas, displaySize);
 
-                // Détection de visages dans la vidéo
+                let detectionCount = 0;
+                const requiredDetections = 3; // Nombre de détections positives requises
+                let lastDetectedLabel = null;
+
                 setInterval(async () => {
                     const detections = await faceapi.detectAllFaces(videoInput).withFaceLandmarks().withFaceDescriptors();
                     const resizedDetections = faceapi.resizeResults(detections, displaySize);
-                    canvas?.clear();
-                    canvas?.drawDetections(resizedDetections);
-                    canvas?.drawFaceLandmarks(resizedDetections);
+                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                    faceapi.draw.drawDetections(canvas, resizedDetections);
+                    faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
 
                     if (detections.length > 0) {
                         const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
-                        console.log(bestMatch.toString()); // Affiche la correspondance
+                        console.log(bestMatch.toString());
 
                         if (bestMatch.label !== 'unknown') {
-                            alert(`Bienvenue, ${bestMatch.label}! Vous êtes connecté.`);
-                            window.location.href = `/home.html`; // Redirection vers la page d'accueil
+                            if (lastDetectedLabel === bestMatch.label) {
+                                detectionCount++;
+                                console.log(`Détection ${detectionCount}/${requiredDetections}`);
+                                
+                                if (detectionCount >= requiredDetections) {
+                                    alert(`Bienvenue, ${bestMatch.label}! Vous êtes connecté.`);
+                                    window.location.href = `/home.html`;
+                                }
+                            } else {
+                                detectionCount = 1;
+                                lastDetectedLabel = bestMatch.label;
+                            }
                         }
                     }
-                }, 100); // Vérifier toutes les 100 ms
+                }, 100);
             });
         });
     </script>
